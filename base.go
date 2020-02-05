@@ -32,11 +32,22 @@ func (c *Client) route(r string) string {
 	return fmt.Sprintf("%v%v", c.url, r)
 }
 
-// New ...
-func New(domain, user, pass string) (*Client, error) {
-	url := fmt.Sprintf(apiURLf, domain)
+type Config struct {
+	Domain        string
+	User          string
+	Password      string
+	DefaultClient http.RoundTripper
+}
 
-	cl, err := getClient(user, pass)
+// New ...
+func New(conf Config) (*Client, error) {
+	if conf.Domain == "" {
+		return nil, fmt.Errorf("domain is required in config")
+	}
+
+	url := fmt.Sprintf(apiURLf, conf.Domain)
+
+	cl, err := getClient(conf)
 	if err != nil {
 		return nil, err
 	}
@@ -44,9 +55,9 @@ func New(domain, user, pass string) (*Client, error) {
 	return &Client{url: url, ht: cl}, nil
 }
 
-func getClient(user, pass string) (http.Client, error) {
-	user = strings.TrimSpace(user)
-	pass = strings.TrimSpace(pass)
+func getClient(conf Config) (http.Client, error) {
+	user := strings.TrimSpace(conf.User)
+	pass := strings.TrimSpace(conf.Password)
 
 	if user == "" || pass == "" {
 		return http.Client{}, ErrInvalidCreds
@@ -56,7 +67,7 @@ func getClient(user, pass string) (http.Client, error) {
 		Transport: rt{
 			user: user,
 			pass: pass,
-			orig: http.DefaultTransport,
+			orig: conf.DefaultClient,
 		},
 		Timeout: time.Second * 10,
 	}, nil
