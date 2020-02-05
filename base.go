@@ -127,6 +127,18 @@ func (c *Client) processResults(req *http.Request, out interface{}) (int, error)
 		return res.StatusCode, nil
 	}
 
+	if res.StatusCode == http.StatusInternalServerError {
+		err := struct {
+			Msg  string `json:"exception message"`
+			Code string `json:"status"`
+		}{Msg: "unknown"}
+		x := json.Unmarshal(resBody, &err)
+		if x != nil {
+			fmt.Printf("unable to unmarshal error: %v\n", x)
+		}
+		return res.StatusCode, fmt.Errorf("request failed; %v", err.Msg)
+	}
+
 	err = json.Unmarshal(resBody, out)
 	if err != nil {
 		return -1, err
